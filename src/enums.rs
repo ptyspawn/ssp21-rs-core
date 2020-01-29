@@ -115,3 +115,43 @@ impl std::convert::From<u8> for HandshakeMode {
         }
     }
 }
+
+pub enum HandshakeError {
+    BadMessageFormat,
+    UnsupportedVersion,
+    UnsupportedHandshakeEphemeral,
+    UnsupportedHandshakeHash,
+    UnsupportedHandshakeKdf,
+    UnsupportedSessionMode,
+    UnsupportedNonceMode,
+    UnsupportedHandshakeMode,
+    BadCertificateFormat,
+    BadCertificateChain,
+    UnsupportedCertificateFeature,
+    AuthenticationError,
+    NoPriorHandshakeBegin,
+    KeyNotFound,
+    Unknown(u8),
+}
+
+impl std::convert::From<u8> for HandshakeError {
+    fn from(x: u8) -> Self {
+        match x {
+            0 => HandshakeError::BadMessageFormat,
+            1 => HandshakeError::UnsupportedVersion,
+            2 => HandshakeError::UnsupportedHandshakeEphemeral,
+            3 => HandshakeError::UnsupportedHandshakeHash,
+            4 => HandshakeError::UnsupportedHandshakeKdf,
+            5 => HandshakeError::UnsupportedSessionMode,
+            6 => HandshakeError::UnsupportedHandshakeHash,
+            7 => HandshakeError::UnsupportedHandshakeMode,
+            8 => HandshakeError::BadCertificateFormat,
+            9 => HandshakeError::BadCertificateChain,
+            10 => HandshakeError::UnsupportedCertificateFeature,
+            11 => HandshakeError::AuthenticationError,
+            12 => HandshakeError::NoPriorHandshakeBegin,
+            13 => HandshakeError::KeyNotFound,
+            _ => HandshakeError::Unknown(x),
+        }
+    }
+}
