@@ -1,15 +1,23 @@
-pub mod functions {
-    pub const REQUEST_HANDSHAKE_BEGIN: u8 = 0;
-    pub const REPLY_HANDSHAKE_BEGIN: u8 = 1;
-    pub const REPLY_HANDSHAKE_ERROR: u8 = 2;
-    pub const SESSION_DATA: u8 = 3;
+use crate::error::Error;
+
+pub enum Function {
+    RequestHandshakeBegin,
+    ReplyHandshakeBegin,
+    ReplyHandshakeError,
+    SessionData,
+    Unknown(u8),
 }
 
-pub mod modes {
-    const SHARED_SECRET: u8 = 0;
-    const PUBLIC_KEYS: u8 = 1;
-    const INDUSTRIAL_CERTIFICATES: u8 = 2;
-    const QUANTUM_KEY_DISTRIBUTION: u8 = 3;
+impl std::convert::From<u8> for Function {
+    fn from(x: u8) -> Self {
+        match x {
+            0 => Function::RequestHandshakeBegin,
+            1 => Function::RequestHandshakeBegin,
+            2 => Function::ReplyHandshakeError,
+            3 => Function::SessionData,
+            _ => Function::Unknown(x)
+        }
+    }
 }
 
 pub struct Field<T> {
@@ -25,7 +33,24 @@ impl<T> Field<T> {
     }
 }
 
-pub enum HandshakeEphemeral {}
+pub enum HandshakeEphemeral {
+    X25519,
+    Nonce,
+    None,
+    Unknown(u8)
+}
+
+impl std::convert::From<u8> for HandshakeEphemeral {
+    fn from(x: u8) -> Self {
+        match x {
+            0 => HandshakeEphemeral::X25519,
+            1 => HandshakeEphemeral::Nonce,
+            2 => HandshakeEphemeral::None,
+            _ => HandshakeEphemeral::Unknown(x)
+        }
+    }
+}
+
 pub enum HandshakeHash {}
 pub enum HandshakeKDF {}
 pub enum SessionNonceMode {}
@@ -49,6 +74,19 @@ pub enum HandshakeMode {
     PublicKeys,
     IndustrialCertificates,
     QuantumKeyDistribution,
+    Unknown(u8)
+}
+
+impl std::convert::From<u8> for HandshakeMode {
+    fn from(x: u8) -> Self {
+        match x {
+            0 => HandshakeMode::SharedSecret,
+            1 => HandshakeMode::PublicKeys,
+            2 => HandshakeMode::IndustrialCertificates,
+            3 => HandshakeMode::QuantumKeyDistribution,
+            _ => HandshakeMode::Unknown(x)
+        }
+    }
 }
 
 pub struct RequestHandshakeBegin<'a> {
