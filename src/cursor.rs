@@ -1,27 +1,9 @@
-use crate::error::{ParseError, Position};
+use crate::error::ParseError;
+use crate::parse::Position;
 
 pub struct Cursor<'a> {
     pos: Position,
     inner: &'a [u8],
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Region {
-    pub begin: Position,
-    pub end: Position,
-}
-
-impl Region {
-    pub fn from(begin: usize, end: usize) -> Self {
-        Region {
-            begin: Position::new(begin),
-            end: Position::new(end),
-        }
-    }
-
-    pub fn new(begin: Position, end: Position) -> Self {
-        Region { begin, end }
-    }
 }
 
 impl<'a> Cursor<'a> {

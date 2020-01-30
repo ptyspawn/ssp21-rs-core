@@ -1,7 +1,45 @@
-use crate::cursor::{Cursor, Region};
+use crate::cursor::Cursor;
 use crate::enums::*;
 use crate::error::ParseError;
 use crate::message::*;
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Position {
+    pub value: usize,
+}
+
+impl Position {
+    pub fn new(pos: usize) -> Self {
+        Self { value: pos }
+    }
+
+    pub fn next(&mut self) {
+        self.value += 1;
+    }
+
+    pub fn advance(&mut self, count: usize) {
+        self.value += count;
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Region {
+    pub begin: Position,
+    pub end: Position,
+}
+
+impl Region {
+    pub fn from(begin: usize, end: usize) -> Self {
+        Region {
+            begin: Position::new(begin),
+            end: Position::new(end),
+        }
+    }
+
+    pub fn new(begin: Position, end: Position) -> Self {
+        Region { begin, end }
+    }
+}
 
 /// Callbacks that occur during parsing
 pub trait ParseCallbacks {
@@ -11,7 +49,7 @@ pub trait ParseCallbacks {
     fn on_error(&mut self, error: ParseError);
 }
 
-pub trait Struct: Sized {
+trait Struct: Sized {
     fn parse<C: ParseCallbacks>(cursor: &mut Cursor, callbacks: &mut C)
         -> Result<Self, ParseError>;
 }
