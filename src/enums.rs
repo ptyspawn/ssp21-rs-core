@@ -1,5 +1,15 @@
-use std::fmt::{Display, Error, Formatter};
+use crate::message::EnumDisplay;
 
+pub trait Enumeration {
+    const DISPLAY: EnumDisplay = EnumDisplay {
+        render: Self::render,
+    };
+
+    fn parse(value: u8) -> Self;
+    fn render(value: u8) -> &'static str;
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum Function {
     RequestHandshakeBegin,
     ReplyHandshakeBegin,
@@ -8,8 +18,8 @@ pub enum Function {
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for Function {
-    fn from(x: u8) -> Self {
+impl Enumeration for Function {
+    fn parse(x: u8) -> Self {
         match x {
             0 => Function::RequestHandshakeBegin,
             1 => Function::RequestHandshakeBegin,
@@ -18,20 +28,19 @@ impl std::convert::From<u8> for Function {
             _ => Function::Unknown(x),
         }
     }
-}
 
-impl Display for Function {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            Function::RequestHandshakeBegin => f.write_str("request handshake begin"),
-            Function::ReplyHandshakeBegin => f.write_str("reply handshake begin"),
-            Function::ReplyHandshakeError => f.write_str("reply handshake error"),
-            Function::SessionData => f.write_str("session data"),
-            Function::Unknown(x) => write!(f, "unknown: 0x{:2x}", x),
+    fn render(value: u8) -> &'static str {
+        match Self::parse(value) {
+            Function::RequestHandshakeBegin => "request handshake begin",
+            Function::ReplyHandshakeBegin => "reply handshake begin",
+            Function::ReplyHandshakeError => "reply handshake error",
+            Function::SessionData => "session data",
+            Function::Unknown(_) => "unknown",
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum HandshakeEphemeral {
     X25519,
     Nonce,
@@ -39,8 +48,8 @@ pub enum HandshakeEphemeral {
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for HandshakeEphemeral {
-    fn from(x: u8) -> Self {
+impl Enumeration for HandshakeEphemeral {
+    fn parse(x: u8) -> Self {
         match x {
             0 => HandshakeEphemeral::X25519,
             1 => HandshakeEphemeral::Nonce,
@@ -48,117 +57,111 @@ impl std::convert::From<u8> for HandshakeEphemeral {
             _ => HandshakeEphemeral::Unknown(x),
         }
     }
-}
 
-impl Display for HandshakeEphemeral {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            HandshakeEphemeral::X25519 => f.write_str("X25519"),
-            HandshakeEphemeral::Nonce => f.write_str("Nonce"),
-            HandshakeEphemeral::None => f.write_str("None"),
-            HandshakeEphemeral::Unknown(x) => write!(f, "unknown: 0x{:2x}", x),
+    fn render(value: u8) -> &'static str {
+        match Self::parse(value) {
+            HandshakeEphemeral::X25519 => "X25519",
+            HandshakeEphemeral::Nonce => "Nonce",
+            HandshakeEphemeral::None => "None",
+            HandshakeEphemeral::Unknown(_) => "unknown",
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum HandshakeHash {
     Sha256,
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for HandshakeHash {
-    fn from(x: u8) -> Self {
+impl Enumeration for HandshakeHash {
+    fn parse(x: u8) -> Self {
         match x {
             0 => HandshakeHash::Sha256,
             _ => HandshakeHash::Unknown(x),
         }
     }
-}
 
-impl Display for HandshakeHash {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            HandshakeHash::Sha256 => f.write_str("SHA-256"),
-            HandshakeHash::Unknown(x) => write!(f, "unknown: 0x{:2x}", x),
+    fn render(value: u8) -> &'static str {
+        match Self::parse(value) {
+            Self::Sha256 => "SHA-256",
+            Self::Unknown(_) => "unknown",
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum HandshakeKDF {
     HkdfSha256,
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for HandshakeKDF {
-    fn from(x: u8) -> Self {
+impl Enumeration for HandshakeKDF {
+    fn parse(x: u8) -> Self {
         match x {
             0 => HandshakeKDF::HkdfSha256,
             _ => HandshakeKDF::Unknown(x),
         }
     }
-}
 
-impl Display for HandshakeKDF {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            HandshakeKDF::HkdfSha256 => f.write_str("HKDF-SHA-256"),
-            HandshakeKDF::Unknown(x) => write!(f, "unknown: 0x{:2x}", x),
+    fn render(value: u8) -> &'static str {
+        match Self::parse(value) {
+            Self::HkdfSha256 => "HKDF-SHA-256",
+            Self::Unknown(_) => "unknown",
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum SessionNonceMode {
     IncrementLastRx,
     GreaterThanLastRx,
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for SessionNonceMode {
-    fn from(x: u8) -> Self {
+impl Enumeration for SessionNonceMode {
+    fn parse(x: u8) -> Self {
         match x {
             0 => SessionNonceMode::IncrementLastRx,
             1 => SessionNonceMode::GreaterThanLastRx,
             _ => SessionNonceMode::Unknown(x),
         }
     }
-}
-
-impl Display for SessionNonceMode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            SessionNonceMode::IncrementLastRx => f.write_str("increment Last Rx"),
-            SessionNonceMode::GreaterThanLastRx => f.write_str("greater than last Rx"),
-            SessionNonceMode::Unknown(x) => write!(f, "unknown: 0x{:2x}", x),
+    fn render(value: u8) -> &'static str {
+        match Self::parse(value) {
+            SessionNonceMode::IncrementLastRx => "strict increment",
+            SessionNonceMode::GreaterThanLastRx => "greater than last rx",
+            SessionNonceMode::Unknown(_) => "unknown",
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum SessionCryptoMode {
     HmacSha256Trunc16,
     Aes256Gcm,
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for SessionCryptoMode {
-    fn from(x: u8) -> Self {
+impl Enumeration for SessionCryptoMode {
+    fn parse(x: u8) -> Self {
         match x {
             0 => SessionCryptoMode::HmacSha256Trunc16,
             1 => SessionCryptoMode::Aes256Gcm,
             _ => SessionCryptoMode::Unknown(x),
         }
     }
-}
 
-impl Display for SessionCryptoMode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            SessionCryptoMode::HmacSha256Trunc16 => f.write_str("HMAC-SHA-256-16"),
-            SessionCryptoMode::Aes256Gcm => f.write_str("AES-256-GCM"),
-            SessionCryptoMode::Unknown(x) => write!(f, "unknown: 0x{:2x}", x),
+    fn render(value: u8) -> &'static str {
+        match Self::parse(value) {
+            SessionCryptoMode::HmacSha256Trunc16 => "HMAC-SHA-256-16",
+            SessionCryptoMode::Aes256Gcm => "AES-256-GCM",
+            SessionCryptoMode::Unknown(_) => "unknown",
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum HandshakeMode {
     SharedSecret,
     PublicKeys,
@@ -167,8 +170,8 @@ pub enum HandshakeMode {
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for HandshakeMode {
-    fn from(x: u8) -> Self {
+impl Enumeration for HandshakeMode {
+    fn parse(x: u8) -> Self {
         match x {
             0 => HandshakeMode::SharedSecret,
             1 => HandshakeMode::PublicKeys,
@@ -177,20 +180,19 @@ impl std::convert::From<u8> for HandshakeMode {
             _ => HandshakeMode::Unknown(x),
         }
     }
-}
 
-impl Display for HandshakeMode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            HandshakeMode::SharedSecret => f.write_str("shared secret"),
-            HandshakeMode::PublicKeys => f.write_str("pre-shared public keys"),
-            HandshakeMode::IndustrialCertificates => f.write_str("industrial certificates"),
-            HandshakeMode::QuantumKeyDistribution => f.write_str("quantum Key distribution"),
-            HandshakeMode::Unknown(x) => write!(f, "unknown: 0x{:2x}", x),
+    fn render(value: u8) -> &'static str {
+        match HandshakeMode::parse(value) {
+            HandshakeMode::SharedSecret => "shared secret",
+            HandshakeMode::PublicKeys => "pre-shared public keys",
+            HandshakeMode::IndustrialCertificates => "industrial certificates",
+            HandshakeMode::QuantumKeyDistribution => "quantum Key distribution",
+            HandshakeMode::Unknown(_) => "unknown",
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum HandshakeError {
     BadMessageFormat,
     UnsupportedVersion,
@@ -209,8 +211,8 @@ pub enum HandshakeError {
     Unknown(u8),
 }
 
-impl std::convert::From<u8> for HandshakeError {
-    fn from(x: u8) -> Self {
+impl Enumeration for HandshakeError {
+    fn parse(x: u8) -> Self {
         match x {
             0 => HandshakeError::BadMessageFormat,
             1 => HandshakeError::UnsupportedVersion,
@@ -229,30 +231,24 @@ impl std::convert::From<u8> for HandshakeError {
             _ => HandshakeError::Unknown(x),
         }
     }
-}
 
-impl Display for HandshakeError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            HandshakeError::BadMessageFormat => f.write_str("bad message format"),
-            HandshakeError::UnsupportedVersion => f.write_str("unsupported version"),
-            HandshakeError::UnsupportedHandshakeEphemeral => {
-                f.write_str("unsupported handshake ephemeral")
-            }
-            HandshakeError::UnsupportedHandshakeHash => f.write_str("unsupported handshake hash"),
-            HandshakeError::UnsupportedHandshakeKdf => f.write_str("unsupported handshake KDF"),
-            HandshakeError::UnsupportedSessionMode => f.write_str("unsupported session mode"),
-            HandshakeError::UnsupportedNonceMode => f.write_str("unsupported nonce nonce"),
-            HandshakeError::UnsupportedHandshakeMode => f.write_str("unsupported handshake mode"),
-            HandshakeError::BadCertificateFormat => f.write_str("bad certificate format"),
-            HandshakeError::BadCertificateChain => f.write_str("bad certificate chain"),
-            HandshakeError::UnsupportedCertificateFeature => {
-                f.write_str("unsupported certificate feature")
-            }
-            HandshakeError::AuthenticationError => f.write_str("authentication error"),
-            HandshakeError::NoPriorHandshakeBegin => f.write_str("no prior handshake begin"),
-            HandshakeError::KeyNotFound => f.write_str("key not found"),
-            HandshakeError::Unknown(x) => write!(f, "unknown: {}", x),
+    fn render(value: u8) -> &'static str {
+        match Self::parse(value) {
+            HandshakeError::BadMessageFormat => "bad message format",
+            HandshakeError::UnsupportedVersion => "unsupported version",
+            HandshakeError::UnsupportedHandshakeEphemeral => "unsupported handshake ephemeral",
+            HandshakeError::UnsupportedHandshakeHash => "unsupported handshake hash",
+            HandshakeError::UnsupportedHandshakeKdf => "unsupported handshake KDF",
+            HandshakeError::UnsupportedSessionMode => "unsupported session mode",
+            HandshakeError::UnsupportedNonceMode => "unsupported nonce nonce",
+            HandshakeError::UnsupportedHandshakeMode => "unsupported handshake mode",
+            HandshakeError::BadCertificateFormat => "bad certificate format",
+            HandshakeError::BadCertificateChain => "bad certificate chain",
+            HandshakeError::UnsupportedCertificateFeature => "unsupported certificate feature",
+            HandshakeError::AuthenticationError => "authentication error",
+            HandshakeError::NoPriorHandshakeBegin => "no prior handshake begin",
+            HandshakeError::KeyNotFound => "key not found",
+            HandshakeError::Unknown(_) => "unknown",
         }
     }
 }

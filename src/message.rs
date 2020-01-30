@@ -1,109 +1,68 @@
 use crate::enums::*;
-use std::fmt::{Display, Error, Formatter};
 
-pub struct Field<'a, T>
-where
-    T: Display,
-{
-    /// value of the field
-    pub value: T,
-    /// name of the field
-    pub name: &'static str,
-    /// Range within the input buffer of this field
-    pub range: std::ops::Range<usize>,
+#[derive(Copy, Clone, Debug)]
+pub struct EnumDisplay {
+    pub render: fn(u8) -> &'static str,
 }
 
-impl<'a, T> Field<'a, T>
-where
-    T: Display,
-{
-    pub fn new(value: T, name: &'static str, range: std::ops::Range<usize>) -> Self {
-        Self { value, name, range }
-    }
+#[derive(Copy, Clone, Debug)]
+pub enum Field<'a> {
+    Enum(EnumDisplay, u8),
+    Bytes(&'a [u8]),
+    U16(u16),
+    DurationMilliseconds(u32),
 }
 
-pub struct Struct<T> {
-    /// value of the struct
-    value: T,
-    /// name of the struct field
-    pub name: &'static str,
-    /// Range within the input buffer of this field
-    range: std::ops::Range<usize>,
+pub struct CryptoSpec {
+    pub handshake_ephemeral: HandshakeEphemeral,
+    pub handshake_hash: HandshakeHash,
+    pub handshake_kdf: HandshakeKDF,
+    pub session_nonce_mode: SessionNonceMode,
+    pub session_crypto_mode: SessionCryptoMode,
 }
 
-impl<T> Struct<T> {
-    pub fn new(value: T, name: &'static str, range: std::ops::Range<usize>) -> Self {
-        Self { value, name, range }
-    }
+pub struct SessionConstraints {
+    pub max_nonce: u16,
+    pub max_session_duration: u32,
 }
 
-pub struct CryptoSpec<'a> {
-    handshake_ephemeral: Field<'a, HandshakeEphemeral>,
-    handshake_hash: Field<'a, HandshakeHash>,
-    handshake_kdf: Field<'a, HandshakeKDF>,
-    session_nonce_mode: Field<'a, SessionNonceMode>,
-    session_crypto_mode: Field<'a, SessionCryptoMode>,
-}
-
-#[derive(Copy, Clone)]
-pub struct Bytes<'a> {
-    pub value: &'a [u8],
-}
-
-impl<'a> Bytes<'a> {
-    pub fn new(value: &'a [u8]) -> Self {
-        Self { value }
-    }
-}
-
-impl<'a> Display for Bytes<'a> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        write!(f, "length: {}", self.value.len())
-    }
-}
-
-pub struct SessionConstraints<'a> {
-    max_nonce: Field<'a, u16>,
-    max_session_duration: Field<'a, u32>,
-}
-
-pub struct AuthMetadata<'a> {
-    nonce: Field<'a, u16>,
-    valid_until_ms: Field<'a, u16>,
+pub struct AuthMetadata {
+    pub nonce: u16,
+    pub valid_until_ms: u32,
 }
 
 pub struct RequestHandshakeBegin<'a> {
-    function: Field<'a, Function>,
-    version: Field<'a, u16>,
-    crypto_spec: Struct<CryptoSpec<'a>>,
-    constraints: Struct<SessionConstraints<'a>>,
-    handshake_mode: Field<'a, HandshakeMode>,
-    mode_ephemeral: Field<'a, Bytes<'a>>,
-    mode_data: Field<'a, Bytes<'a>>,
+    pub function: Function,
+    pub version: u16,
+    pub crypto_spec: CryptoSpec,
+    pub constraints: SessionConstraints,
+    pub handshake_mode: HandshakeMode,
+    pub mode_ephemeral: &'a [u8],
+    pub mode_data: &'a [u8],
 }
 
 pub struct ReplyHandshakeBegin<'a> {
-    function: Field<'a, Function>,
-    mode_ephemeral: Field<'a, Bytes<'a>>,
-    mode_data: Field<'a, Bytes<'a>>,
+    pub function: Function,
+    pub mode_ephemeral: &'a [u8],
+    pub mode_data: &'a [u8],
 }
 
-pub struct ReplyHandshakeError<'a> {
-    function: Field<'a, Function>,
-    error: Field<'a, HandshakeError>,
+pub struct ReplyHandshakeError {
+    pub function: Function,
+    pub error: HandshakeError,
 }
 
 pub struct SessionData<'a> {
-    function: Field<'a, Function>,
-    metadata: Struct<AuthMetadata<'a>>,
-    user_data: Field<'a, Bytes<'a>>,
-    auth_tag: Field<'a, Bytes<'a>>,
+    pub function: Function,
+    pub metadata: AuthMetadata,
+    pub user_data: &'a [u8],
+    pub auth_tag: &'a [u8],
 }
 
 pub enum Message<'a> {
     RequestHandshakeBegin(RequestHandshakeBegin<'a>),
     ReplyHandshakeBegin(ReplyHandshakeBegin<'a>),
-    ReplyHandshakeError(ReplyHandshakeError<'a>),
+    ReplyHandshakeError(ReplyHandshakeError),
     SessionData(SessionData<'a>),
 }
 
@@ -119,7 +78,7 @@ impl<'a> std::convert::From<ReplyHandshakeBegin<'a>> for Message<'a> {
     }
 }
 
-impl<'a> std::convert::From<ReplyHandshakeError<'a>> for Message<'a> {
+impl<'a> std::convert::From<ReplyHandshakeError> for Message<'a> {
     fn from(msg: ReplyHandshakeError) -> Self {
         Message::ReplyHandshakeError(msg)
     }

@@ -1,55 +1,113 @@
-use crate::cursor::Cursor;
+use crate::cursor::{Cursor, Region};
 use crate::enums::*;
 use crate::error::ParseError;
 use crate::message::*;
-use std::fmt::Display;
 
 /// Callbacks that occur during parsing
 pub trait ParseCallbacks {
-    fn on_start_struct(&mut self, name: &str);
-    fn on_field<T>(&mut self, value: &Field<T>)
-    where
-        T: Display;
-    fn on_end_struct(&mut self);
+    fn on_start_struct(&mut self, name: &'static str);
+    fn on_field(&mut self, name: &'static str, region: Region, value: Field);
+    fn on_end_struct(&mut self, region: Region);
 }
 
-pub fn parse_field<'a, T, F, C>(
-    name: &'static str,
-    cursor: &mut Cursor<'a>,
+pub trait Struct: Sized {
+    fn parse<C: ParseCallbacks>(cursor: &mut Cursor, callbacks: &mut C)
+        -> Result<Self, ParseError>;
+}
+
+fn parse_region_cb<C, R>(
+    cursor: &mut Cursor,
     callbacks: &mut C,
-    parser: F,
-) -> Result<Field<'a, T>, ParseError>
-    where
-        T: Display,
-        F: Fn(&mut Cursor) -> Result<T, ParseError>,
-        C: ParseCallbacks,
+    inner: fn(&mut Cursor, &mut C) -> Result<R, ParseError>,
+) -> Result<(R, Region), ParseError>
+where
+    C: ParseCallbacks,
 {
-    let start = cursor.pos();
-    let value = parser(cursor)?;
+    let begin = cursor.pos();
+    let value = inner(cursor, callbacks)?;
     let end = cursor.pos();
-    let field = Field::new(value, name, start.value..end.value);
-    callbacks.on_field(&field);
-    Ok(field)
+    Ok((value, Region::new(begin, end)))
 }
 
-pub fn parse_struct<T, F, C>(
+fn parse_region<C, R>(
+    cursor: &mut Cursor,
+    inner: fn(&mut Cursor) -> Result<R, ParseError>,
+) -> Result<(R, Region), ParseError> {
+    let begin = cursor.pos();
+    let value = inner(cursor)?;
+    let end = cursor.pos();
+    Ok((value, Region::new(begin, end)))
+}
+
+pub fn parse_u16<C>(
     name: &'static str,
     cursor: &mut Cursor,
     callbacks: &mut C,
-    parser: F,
-) -> Result<Struct<T>, ParseError>
-    where
-        F: Fn(&mut Cursor, &mut C) -> Result<T, ParseError>,
-        C: ParseCallbacks,
+) -> Result<u16, ParseError>
+where
+    C: ParseCallbacks,
 {
+    let (value, region) = parse_region::<C, u16>(cursor, |cursor| cursor.read_u16())?;
+    callbacks.on_field(name, region, Field::U16(value));
+    Ok(value)
+}
 
-    let start = cursor.pos();
-    callbacks.on_start_struct(name);
-    let value = parser(cursor, callbacks)?;
+pub fn parse_duration_ms<C>(
+    name: &'static str,
+    cursor: &mut Cursor,
+    callbacks: &mut C,
+) -> Result<u32, ParseError>
+where
+    C: ParseCallbacks,
+{
+    let (value, region) = parse_region::<C, u32>(cursor, |cursor| cursor.read_u32())?;
+    callbacks.on_field(name, region, Field::DurationMilliseconds(value));
+    Ok(value)
+}
+
+pub fn parse_enum<'a, C, E>(
+    name: &'static str,
+    cursor: &mut Cursor<'a>,
+    callbacks: &mut C,
+) -> Result<E, ParseError>
+where
+    C: ParseCallbacks,
+    E: Enumeration,
+{
+    let (raw, region) = parse_region::<C, u8>(cursor, |cursor| cursor.read_u8())?;
+    callbacks.on_field(name, region, Field::Enum(E::DISPLAY, raw));
+    Ok(E::parse(raw))
+}
+
+pub fn parse_bytes<'a, C>(
+    name: &'static str,
+    cursor: &mut Cursor<'a>,
+    callbacks: &mut C,
+) -> Result<&'a [u8], ParseError>
+where
+    C: ParseCallbacks,
+{
+    let begin = cursor.pos();
+    let length = crate::length::read(cursor)?;
+    let value = cursor.read(length as usize)?;
     let end = cursor.pos();
-    let s = Struct::new(value, name, start.value..end.value);
-    callbacks.on_end_struct();
-    Ok(s)
+    callbacks.on_field(name, Region::new(begin, end), Field::Bytes(value));
+    Ok(value)
+}
+
+pub fn parse_struct<C, S>(
+    name: &'static str,
+    cursor: &mut Cursor,
+    callbacks: &mut C,
+) -> Result<S, ParseError>
+where
+    C: ParseCallbacks,
+    S: Struct,
+{
+    callbacks.on_start_struct(name);
+    let (value, region) = parse_region_cb(cursor, callbacks, S::parse)?;
+    callbacks.on_end_struct(region);
+    Ok(value)
 }
 
 pub fn parse<'a, C>(input: &'a [u8], callbacks: &mut C) -> Result<Message<'a>, ParseError>
@@ -59,11 +117,9 @@ where
     let mut cursor = Cursor::new(input);
     let start = cursor.pos();
 
-    let function: Field<Function> = parse_field("function", &mut cursor, callbacks, |c| {
-        c.read_u8().map(Function::from)
-    })?;
+    let function: Function = parse_enum("function", &mut cursor, callbacks)?;
 
-    match function.value {
+    match function {
         Function::RequestHandshakeBegin => {
             Ok(parse_request_handshake_begin(function, &mut cursor, callbacks)?.into())
         }
@@ -78,103 +134,105 @@ where
     }
 }
 
-pub fn parse_crypto_spec<'a, C>(
-    cursor: &mut Cursor<'a>,
-    callbacks: &mut C,
-) -> Result<CryptoSpec<'a>, ParseError>
+impl Struct for CryptoSpec {
+    fn parse<'a, C>(cursor: &mut Cursor<'a>, callbacks: &mut C) -> Result<CryptoSpec, ParseError>
     where
         C: ParseCallbacks,
-{
-    Ok(
-        CryptoSpec {
-            handshake_ephemeral : parse_field("handshake ephemeral", cursor, callbacks, |c| c.read_u8().map(HandshakeEphemeral::from))?,
-            handshake_hash : parse_field("handshake hash", cursor, callbacks, |c| c.read_u8().map(HandshakeHash::from))?,
-            handshake_kdf : parse_field("handshake kdf", cursor, callbacks, |c| c.read_u8().map(HandshakeKDF::from))?,
-            session_nonce_mode : parse_field("session nonce mode", cursor, callbacks, |c| c.read_u8().map(SessionNonceMode::from))?,
-            session_crypto_mode : parse_field("session crypto mode", cursor, callbacks, |c| c.read_u8().map(SessionCryptoMode::from))?,
-        }
-    )
+    {
+        Ok(CryptoSpec {
+            handshake_ephemeral: parse_enum("handshake ephemeral", cursor, callbacks)?,
+            handshake_hash: parse_enum("handshake hash", cursor, callbacks)?,
+            handshake_kdf: parse_enum("handshake kdf", cursor, callbacks)?,
+            session_nonce_mode: parse_enum("session nonce mode", cursor, callbacks)?,
+            session_crypto_mode: parse_enum("session crypto mode", cursor, callbacks)?,
+        })
+    }
 }
 
-pub fn parse_constraints<'a, C>(
-    cursor: &mut Cursor<'a>,
-    callbacks: &mut C,
-) -> Result<SessionConstraints<'a>, ParseError>
+impl Struct for SessionConstraints {
+    fn parse<C>(cursor: &mut Cursor, callbacks: &mut C) -> Result<SessionConstraints, ParseError>
     where
         C: ParseCallbacks,
-{
-    Ok(
-        SessionConstraints {
-            max_nonce : parse_field("max nonce", cursor, callbacks, |c| c.read_u16())?,
-            max_session_duration : parse_field("max session duration (ms)", cursor, callbacks, |c| c.read_u32())?,
-        }
-    )
+    {
+        Ok(SessionConstraints {
+            max_nonce: parse_u16("max nonce", cursor, callbacks)?,
+            max_session_duration: parse_duration_ms("max session duration", cursor, callbacks)?,
+        })
+    }
 }
 
-pub fn parse_bytes<'a, C>(
-    cursor: &mut Cursor<'a>,
-    callbacks: &mut C,
-) -> Result<Bytes<'a>, ParseError>
+impl Struct for AuthMetadata {
+    fn parse<'a, C>(cursor: &mut Cursor, callbacks: &mut C) -> Result<AuthMetadata, ParseError>
     where
         C: ParseCallbacks,
-{
-    let length = crate::length::read(cursor)?;
-
-    Ok(Bytes::new(cursor.read(length as usize)?))
+    {
+        Ok(AuthMetadata {
+            nonce: parse_u16("nonce", cursor, callbacks)?,
+            valid_until_ms: parse_duration_ms("valid until ms", cursor, callbacks)?,
+        })
+    }
 }
 
 pub fn parse_request_handshake_begin<'a, C>(
-    function: Field<Function>,
+    function: Function,
     cursor: &mut Cursor<'a>,
     callbacks: &mut C,
 ) -> Result<RequestHandshakeBegin<'a>, ParseError>
 where
     C: ParseCallbacks,
 {
-    Ok(
-        RequestHandshakeBegin {
-            function,
-            version: parse_field("version", cursor, callbacks, |c| c.read_u16())?,
-            crypto_spec: parse_struct("crypto spec", cursor, callbacks, parse_crypto_spec)?,
-            constraints: parse_struct("session constraints", cursor, callbacks, parse_constraints)?,
-            handshake_mode: parse_field("handshake mode", cursor, callbacks, |c| c.read_u8().map(HandshakeMode::from))?,
-            mode_ephemeral: parse_field("mode ephemeral", cursor, callbacks, |c| parse_bytes(c, callbacks))?,
-            mode_data: parse_field("mode data", cursor, callbacks, |c| parse_bytes(c, callbacks))?,
-        }
-    )
+    Ok(RequestHandshakeBegin {
+        function,
+        version: parse_u16("version", cursor, callbacks)?,
+        crypto_spec: parse_struct("crypto spec", cursor, callbacks)?,
+        constraints: parse_struct("session constraints", cursor, callbacks)?,
+        handshake_mode: parse_enum("handshake mode", cursor, callbacks)?,
+        mode_ephemeral: parse_bytes("mode ephemeral", cursor, callbacks)?,
+        mode_data: parse_bytes("mode data", cursor, callbacks)?,
+    })
 }
 
-
-
 pub fn parse_reply_handshake_begin<'a, C>(
-    function: Field<Function>,
+    function: Function,
     cursor: &mut Cursor<'a>,
     callbacks: &mut C,
 ) -> Result<ReplyHandshakeBegin<'a>, ParseError>
 where
     C: ParseCallbacks,
 {
-    Err(ParseError::EndOfStream(cursor.pos(), 1))
+    Ok(ReplyHandshakeBegin {
+        function,
+        mode_ephemeral: parse_bytes("mode ephemeral", cursor, callbacks)?,
+        mode_data: parse_bytes("mode data", cursor, callbacks)?,
+    })
 }
 
 pub fn parse_reply_handshake_error<'a, C>(
-    function: Field<Function>,
+    function: Function,
     cursor: &mut Cursor<'a>,
     callbacks: &mut C,
-) -> Result<ReplyHandshakeError<'a>, ParseError>
+) -> Result<ReplyHandshakeError, ParseError>
 where
     C: ParseCallbacks,
 {
-    Err(ParseError::EndOfStream(cursor.pos(), 1))
+    Ok(ReplyHandshakeError {
+        function,
+        error: parse_enum("error", cursor, callbacks)?,
+    })
 }
 
 pub fn parse_session_data<'a, C>(
-    function: Field<Function>,
+    function: Function,
     cursor: &mut Cursor<'a>,
     callbacks: &mut C,
 ) -> Result<SessionData<'a>, ParseError>
 where
     C: ParseCallbacks,
 {
-    Err(ParseError::EndOfStream(cursor.pos(), 1))
+    Ok(SessionData {
+        function,
+        metadata: parse_struct("auth_metadata", cursor, callbacks)?,
+        user_data: parse_bytes("user data", cursor, callbacks)?,
+        auth_tag: parse_bytes("auth tag", cursor, callbacks)?,
+    })
 }

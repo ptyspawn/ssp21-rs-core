@@ -5,6 +5,18 @@ pub struct Cursor<'a> {
     inner: &'a [u8],
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct Region {
+    pub begin: Position,
+    pub end: Position,
+}
+
+impl Region {
+    pub fn new(begin: Position, end: Position) -> Self {
+        Region { begin, end }
+    }
+}
+
 impl<'a> Cursor<'a> {
     pub fn new(inner: &'a [u8]) -> Self {
         Self {
@@ -45,13 +57,13 @@ impl<'a> Cursor<'a> {
         Ok(((w1 as u32) << 16) | (w2 as u32))
     }
 
-    pub fn read(&mut self, count : usize) -> Result<&'a [u8], ParseError> {
-        match self.inner.get(self.pos.value .. self.pos.value + count) {
+    pub fn read(&mut self, count: usize) -> Result<&'a [u8], ParseError> {
+        match self.inner.get(self.pos.value..self.pos.value + count) {
             Some(bytes) => {
                 self.pos.advance(count);
                 Ok(bytes)
             }
-            None => Err(ParseError::EndOfStream(self.pos, count))
+            None => Err(ParseError::EndOfStream(self.pos, count)),
         }
     }
 }
