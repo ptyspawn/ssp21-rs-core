@@ -23,7 +23,7 @@ impl<'a> Cursor<'a> {
                 self.pos.next();
                 Ok(*b)
             }
-            None => Err(ParseError::EndOfStream(self.pos)),
+            None => Err(ParseError::EndOfStream(self.pos, 1)),
         }
     }
 
@@ -43,5 +43,15 @@ impl<'a> Cursor<'a> {
         let w1 = self.read_u16()?;
         let w2 = self.read_u16()?;
         Ok(((w1 as u32) << 16) | (w2 as u32))
+    }
+
+    pub fn read(&mut self, count : usize) -> Result<&'a [u8], ParseError> {
+        match self.inner.get(self.pos.value .. self.pos.value + count) {
+            Some(bytes) => {
+                self.pos.advance(count);
+                Ok(bytes)
+            }
+            None => Err(ParseError::EndOfStream(self.pos, count))
+        }
     }
 }
