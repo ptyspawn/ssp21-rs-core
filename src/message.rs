@@ -1,14 +1,35 @@
 use crate::enums::*;
-use crate::error::Error;
+use std::fmt::{Display, Error, Formatter};
 
-pub struct Field<T> {
+pub struct Field<T>
+where
+    T: Display,
+{
     /// value of the field
+    pub value: T,
+    /// name of the field
+    pub name: &'static str,
+    /// Range within the input buffer of this field
+    pub range: std::ops::Range<usize>,
+}
+
+impl<T> Field<T>
+where
+    T: Display,
+{
+    pub fn new(value: T, name: &'static str, range: std::ops::Range<usize>) -> Self {
+        Self { value, name, range }
+    }
+}
+
+pub struct Struct<T> {
+    /// value of the struct
     value: T,
     /// Range within the input buffer of this field
     range: std::ops::Range<usize>,
 }
 
-impl<T> Field<T> {
+impl<T> Struct<T> {
     pub fn new(value: T, range: std::ops::Range<usize>) -> Self {
         Self { value, range }
     }
@@ -20,6 +41,22 @@ pub struct CryptoSpec {
     handshake_kdf: Field<HandshakeKDF>,
     session_nonce_mode: Field<SessionNonceMode>,
     session_crypto_mode: Field<SessionCryptoMode>,
+}
+
+pub struct Bytes<'a> {
+    pub value: &'a [u8],
+}
+
+impl<'a> Bytes<'a> {
+    fn new(value: &'a [u8]) -> Self {
+        Self { value }
+    }
+}
+
+impl<'a> Display for Bytes<'a> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "length: {}", self.value.len())
+    }
 }
 
 pub struct SessionConstraints {
@@ -35,17 +72,17 @@ pub struct AuthMetadata {
 pub struct RequestHandshakeBegin<'a> {
     function: Field<Function>,
     version: Field<u16>,
-    crypto_spec: Field<CryptoSpec>,
-    constraints: Field<SessionConstraints>,
+    crypto_spec: Struct<CryptoSpec>,
+    constraints: Struct<SessionConstraints>,
     handshake_mode: Field<HandshakeMode>,
-    mode_ephemeral: Field<&'a [u8]>,
-    mode_data: Field<&'a [u8]>,
+    mode_ephemeral: Field<Bytes<'a>>,
+    mode_data: Field<Bytes<'a>>,
 }
 
 pub struct ReplyHandshakeBegin<'a> {
     function: Field<Function>,
-    mode_ephemeral: Field<&'a [u8]>,
-    mode_data: Field<&'a [u8]>,
+    mode_ephemeral: Field<Bytes<'a>>,
+    mode_data: Field<Bytes<'a>>,
 }
 
 pub struct ReplyHandshakeError {
@@ -55,7 +92,14 @@ pub struct ReplyHandshakeError {
 
 pub struct SessionData<'a> {
     function: Field<Function>,
-    metadata: Field<AuthMetadata>,
-    user_data: Field<&'a [u8]>,
-    auth_tag: Field<&'a [u8]>,
+    metadata: Struct<AuthMetadata>,
+    user_data: Field<Bytes<'a>>,
+    auth_tag: Field<Bytes<'a>>,
+}
+
+pub enum Message<'a> {
+    RequestHandshakeBegin(RequestHandshakeBegin<'a>),
+    ReplyHandshakeBegin(ReplyHandshakeBegin<'a>),
+    ReplyHandshakeError(ReplyHandshakeError),
+    SessionData(SessionData<'a>),
 }

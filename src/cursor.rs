@@ -1,42 +1,45 @@
-use crate::error::Error;
+use crate::error::{ParseError, Position};
 
 pub struct Cursor<'a> {
-    pos: usize,
+    pos: Position,
     inner: &'a [u8],
 }
 
 impl<'a> Cursor<'a> {
-    pub fn new(pos: usize, inner: &'a [u8]) -> Self {
-        Self { pos, inner }
-    }
-
-    pub fn pos(&self) -> usize {
-        self.pos
-    }
-
-    pub fn read_u8(&mut self) -> Result<u8, Error> {
-        match self.inner.get(self.pos) {
-            Some(b) => {
-                self.pos += 1;
-                Ok(*b)
-            }
-            None => Err(Error::EndOfStream),
+    pub fn new(inner: &'a [u8]) -> Self {
+        Self {
+            pos: Position::new(0),
+            inner,
         }
     }
 
-    pub fn read_u16(&mut self) -> Result<u16, Error> {
+    pub fn pos(&self) -> Position {
+        self.pos
+    }
+
+    pub fn read_u8(&mut self) -> Result<u8, ParseError> {
+        match self.inner.get(self.pos.value) {
+            Some(b) => {
+                self.pos.next();
+                Ok(*b)
+            }
+            None => Err(ParseError::EndOfStream(self.pos)),
+        }
+    }
+
+    pub fn read_u16(&mut self) -> Result<u16, ParseError> {
         let b1 = self.read_u8()?;
         let b2 = self.read_u8()?;
         Ok(((b1 as u16) << 8) | (b2 as u16))
     }
 
-    pub fn read_u24(&mut self) -> Result<u32, Error> {
+    pub fn read_u24(&mut self) -> Result<u32, ParseError> {
         let b = self.read_u8()?;
         let w = self.read_u16()?;
         Ok(((b as u32) << 16) | (w as u32))
     }
 
-    pub fn read_u32(&mut self) -> Result<u32, Error> {
+    pub fn read_u32(&mut self) -> Result<u32, ParseError> {
         let w1 = self.read_u16()?;
         let w2 = self.read_u16()?;
         Ok(((w1 as u32) << 16) | (w2 as u32))
