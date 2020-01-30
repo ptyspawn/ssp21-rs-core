@@ -4,7 +4,7 @@ use crate::parse::ParseCallbacks;
 use std::ffi::{c_void, CString};
 
 #[repr(C)]
-struct Region {
+pub struct Region {
     start: usize,
     end: usize,
 }
@@ -25,12 +25,22 @@ type ErrorCallback = unsafe extern "C" fn(
 );
 
 #[repr(C)]
-struct Callbacks {
+pub struct Callbacks {
     user_data: *mut c_void,
     start_struct: StartStructCallback,
     end_struct: EndStructCallback,
     field: OnFieldCallback,
     error: ErrorCallback,
+}
+
+pub unsafe extern "C" fn parse_ssp21_message(
+    data: *const u8,
+    length: usize,
+    mut callbacks: Callbacks,
+) {
+    let slice = std::slice::from_raw_parts(data, length);
+    // we only care about the callbacks, hence the "ok()"
+    crate::parse::parse_message(slice, &mut callbacks).ok();
 }
 
 impl Callbacks {
