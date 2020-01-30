@@ -1,3 +1,5 @@
+#![no_std]
+
 pub mod cursor;
 pub mod enums;
 pub mod error;
