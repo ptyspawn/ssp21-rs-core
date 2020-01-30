@@ -1,5 +1,5 @@
 [package]
-name = "ssp21-wireshark"
+name = "ssp21ws"
 version = "0.1.0"
 authors = ["Adam Crain jadamcrain@automatak.com"]
 edition = "2018"
