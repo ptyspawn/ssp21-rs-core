@@ -9,7 +9,7 @@ pub trait Enumeration {
     fn render(value: u8) -> &'static str;
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Function {
     RequestHandshakeBegin,
     ReplyHandshakeBegin,
@@ -40,7 +40,7 @@ impl Enumeration for Function {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum HandshakeEphemeral {
     X25519,
     Nonce,
@@ -68,7 +68,7 @@ impl Enumeration for HandshakeEphemeral {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum HandshakeHash {
     Sha256,
     Unknown(u8),
@@ -90,7 +90,7 @@ impl Enumeration for HandshakeHash {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum HandshakeKDF {
     HkdfSha256,
     Unknown(u8),
@@ -112,9 +112,9 @@ impl Enumeration for HandshakeKDF {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum SessionNonceMode {
-    IncrementLastRx,
+    StrictIncrement,
     GreaterThanLastRx,
     Unknown(u8),
 }
@@ -122,21 +122,21 @@ pub enum SessionNonceMode {
 impl Enumeration for SessionNonceMode {
     fn parse(x: u8) -> Self {
         match x {
-            0 => SessionNonceMode::IncrementLastRx,
+            0 => SessionNonceMode::StrictIncrement,
             1 => SessionNonceMode::GreaterThanLastRx,
             _ => SessionNonceMode::Unknown(x),
         }
     }
     fn render(value: u8) -> &'static str {
         match Self::parse(value) {
-            SessionNonceMode::IncrementLastRx => "strict increment",
+            SessionNonceMode::StrictIncrement => "strict increment",
             SessionNonceMode::GreaterThanLastRx => "greater than last rx",
             SessionNonceMode::Unknown(_) => "unknown",
         }
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum SessionCryptoMode {
     HmacSha256Trunc16,
     Aes256Gcm,
@@ -161,7 +161,7 @@ impl Enumeration for SessionCryptoMode {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum HandshakeMode {
     SharedSecret,
     PublicKeys,
@@ -192,7 +192,7 @@ impl Enumeration for HandshakeMode {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum HandshakeError {
     BadMessageFormat,
     UnsupportedVersion,

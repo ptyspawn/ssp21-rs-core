@@ -5,13 +5,20 @@ pub struct Cursor<'a> {
     inner: &'a [u8],
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Region {
     pub begin: Position,
     pub end: Position,
 }
 
 impl Region {
+    pub fn from(begin: usize, end: usize) -> Self {
+        Region {
+            begin: Position::new(begin),
+            end: Position::new(end),
+        }
+    }
+
     pub fn new(begin: Position, end: Position) -> Self {
         Region { begin, end }
     }
@@ -23,6 +30,10 @@ impl<'a> Cursor<'a> {
             pos: Position::new(0),
             inner,
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.pos.value == self.inner.len()
     }
 
     pub fn pos(&self) -> Position {

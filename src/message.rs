@@ -13,6 +13,7 @@ pub enum Field<'a> {
     DurationMilliseconds(u32),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct CryptoSpec {
     pub handshake_ephemeral: HandshakeEphemeral,
     pub handshake_hash: HandshakeHash,
@@ -21,16 +22,19 @@ pub struct CryptoSpec {
     pub session_crypto_mode: SessionCryptoMode,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct SessionConstraints {
     pub max_nonce: u16,
     pub max_session_duration: u32,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct AuthMetadata {
     pub nonce: u16,
     pub valid_until_ms: u32,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct RequestHandshakeBegin<'a> {
     pub function: Function,
     pub version: u16,
@@ -41,17 +45,20 @@ pub struct RequestHandshakeBegin<'a> {
     pub mode_data: &'a [u8],
 }
 
+#[derive(Debug, PartialEq)]
 pub struct ReplyHandshakeBegin<'a> {
     pub function: Function,
     pub mode_ephemeral: &'a [u8],
     pub mode_data: &'a [u8],
 }
 
+#[derive(Debug, PartialEq)]
 pub struct ReplyHandshakeError {
     pub function: Function,
     pub error: HandshakeError,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct SessionData<'a> {
     pub function: Function,
     pub metadata: AuthMetadata,
@@ -59,33 +66,10 @@ pub struct SessionData<'a> {
     pub auth_tag: &'a [u8],
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Message<'a> {
     RequestHandshakeBegin(RequestHandshakeBegin<'a>),
     ReplyHandshakeBegin(ReplyHandshakeBegin<'a>),
     ReplyHandshakeError(ReplyHandshakeError),
     SessionData(SessionData<'a>),
-}
-
-impl<'a> std::convert::From<RequestHandshakeBegin<'a>> for Message<'a> {
-    fn from(msg: RequestHandshakeBegin<'a>) -> Self {
-        Message::RequestHandshakeBegin(msg)
-    }
-}
-
-impl<'a> std::convert::From<ReplyHandshakeBegin<'a>> for Message<'a> {
-    fn from(msg: ReplyHandshakeBegin<'a>) -> Self {
-        Message::ReplyHandshakeBegin(msg)
-    }
-}
-
-impl<'a> std::convert::From<ReplyHandshakeError> for Message<'a> {
-    fn from(msg: ReplyHandshakeError) -> Self {
-        Message::ReplyHandshakeError(msg)
-    }
-}
-
-impl<'a> std::convert::From<SessionData<'a>> for Message<'a> {
-    fn from(msg: SessionData<'a>) -> Self {
-        Message::SessionData(msg)
-    }
 }

@@ -40,7 +40,7 @@ pub fn read(cursor: &mut Cursor) -> Result<u32, ParseError> {
         }
         3 => {
             let value = cursor.read_u24()?;
-            if value < 65536 {
+            if value < 65_536 {
                 return Err(ParseError::BadLengthEncoding(
                     pos_after,
                     count_of_bytes,
@@ -51,7 +51,7 @@ pub fn read(cursor: &mut Cursor) -> Result<u32, ParseError> {
         }
         4 => {
             let value = cursor.read_u32()?;
-            if value < 16777216 {
+            if value < 16_777_216 {
                 return Err(ParseError::BadLengthEncoding(
                     pos_after,
                     count_of_bytes,
