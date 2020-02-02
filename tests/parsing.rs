@@ -1,9 +1,9 @@
-extern crate ssp21ws;
+extern crate ssp21_rs_core;
 
-use ssp21ws::enums::*;
-use ssp21ws::error::ParseError;
-use ssp21ws::message::*;
-use ssp21ws::parse::{parse_message, ParseCallbacks, Position, Region};
+use ssp21_rs_core::enums::*;
+use ssp21_rs_core::error::ParseError;
+use ssp21_rs_core::message::*;
+use ssp21_rs_core::parse::{parse_message, ParseCallbacks, Position, Region};
 use std::collections::VecDeque;
 
 #[derive(Debug, Copy, Clone)]

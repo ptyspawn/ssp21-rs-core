@@ -1,5 +1,5 @@
 [package]
-name = "ssp21ws"
+name = "ssp21-rs-core"
 version = "0.1.0"
 authors = ["Adam Crain jadamcrain@automatak.com"]
 edition = "2018"
